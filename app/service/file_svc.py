@@ -250,10 +250,25 @@ class FileSvc(FileServiceInterface, BaseService):
         return '%s.xored' % filename
 
     def _save(self, filename, content, encrypt=True):
-        if encrypt and (self.encryptor and self.encrypt_output):
-            content = bytes(FILE_ENCRYPTION_FLAG, 'utf-8') + self.encryptor.encrypt(content)
-        with open(filename, 'wb') as f:
-            f.write(content)
+        sanitized_filename = sanitize_filename(filename)
+        
+        try:
+            if encrypt and (self.encryptor and self.encrypt_output):
+                content = bytes(FILE_ENCRYPTION_FLAG, 'utf-8') + self.encryptor.encrypt(content)
+            with open(sanitized_filename, 'wb') as f:
+                f.write(content)
+        except ValueError as e:
+            self.log.error('Invalid input while processing file {}: {}'.format(filename, e))
+        except FileNotFoundError as e:
+            self.log.error('File path not found for {}: {}'.format(sanitized_filename, e))
+        except PermissionError as e:
+            self.log.error('Permission denied while writing to file {}: {}'.format(sanitized_filename, e))
+        except OSError as e:
+            self.log.error('OS-related error occurred while handling file {}: {}'.format(sanitized_filename, e))
+        except TypeError as e:
+            self.log.error('Type error while writing content to file {}: {}'.format(sanitized_filename, e))
+        except Exception as e:
+            self.log.error('Unexpected error occurred while handling file {}: {}'.format(sanitized_filename, e))
 
     def _read(self, filename):
         with open(filename, 'rb') as f:
@@ -325,3 +340,12 @@ def _go_vars(arch, platform):
 
 def _get_header():
     return 'SET' if os.name == 'nt' else ''
+
+def sanitize_filename(filename: str) -> str:
+    """
+    Sanitizes a file name to remove potentially dangerous characters.
+
+    :param filename: The original file name.
+    :return: A sanitized file name.
+    """
+    return re.sub(r'[^\w\.-]', '_', filename)

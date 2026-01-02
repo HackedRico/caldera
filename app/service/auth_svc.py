@@ -1,5 +1,6 @@
 import base64
 from collections import namedtuple
+from functools import wraps
 from hmac import compare_digest
 from importlib import import_module
 
@@ -45,6 +46,7 @@ def check_authorization(func):
     async def process(func, *args, **params):
         return await func(*args, **params)
 
+    @wraps(func)
     async def helper(*args, **params):
         if len(args) > 1 and type(args[1]) is web_request.Request:
             await args[0].auth_svc.check_permissions('app', args[1])

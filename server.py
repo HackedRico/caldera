@@ -79,6 +79,7 @@ def run_tasks(services, run_vue_server=False):
     loop.run_until_complete(knowledge_svc.restore_state())
     loop.run_until_complete(app_svc.register_contacts())
     loop.run_until_complete(app_svc.load_plugins(args.plugins))
+    init_swagger_documentation(app_svc.application)
     loop.run_until_complete(
         data_svc.load_data(
             loop.run_until_complete(data_svc.locate("plugins", dict(enabled=True)))
@@ -148,7 +149,6 @@ async def start_vue_dev_server():
 
 
 def _get_parser():
-
     def list_str(values):
         return values.split(",")
 
@@ -252,7 +252,6 @@ if __name__ == "__main__":
         )
     )
     app_svc.register_subapp("/api/v2", app.api.v2.make_app(app_svc.get_services()))
-    init_swagger_documentation(app_svc.application)
     if args.uiDevHost:
         if not os.path.exists(f"{MAGMA_PATH}/dist"):
             logging.info("Building VueJS front-end.")
